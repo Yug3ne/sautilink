@@ -1,15 +1,7 @@
 import { useState } from "react";
-import {
-  engagementByMonth,
-  sentimentByCounty,
-  topIssues,
-  budgetItems,
-  feedbacks,
-  bills,
-  citizens,
-  votes,
-  channelDistribution,
-} from "@/data/dummy";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
   Card,
   CardContent,
@@ -114,52 +106,6 @@ const feedbackSparkline = [
   { v: 2 },
 ];
 
-// --- Recent activity dummy data ---
-const recentActivity = [
-  {
-    id: "a1",
-    type: "vote" as const,
-    text: "Wanjiku Muthoni voted FOR road construction in Agikuyu Ward",
-    time: "2 min ago",
-    channel: "USSD",
-  },
-  {
-    id: "a2",
-    type: "feedback" as const,
-    text: "James Kamau submitted a question about bursary applications",
-    time: "15 min ago",
-    channel: "Web",
-  },
-  {
-    id: "a3",
-    type: "vote" as const,
-    text: "Grace Njeri voted AGAINST 15% commercial property tax",
-    time: "32 min ago",
-    channel: "USSD",
-  },
-  {
-    id: "a4",
-    type: "feedback" as const,
-    text: "Akinyi Odhiambo reported missing desks at Kolwa East ECDE center",
-    time: "1 hr ago",
-    channel: "Web",
-  },
-  {
-    id: "a5",
-    type: "vote" as const,
-    text: "Hassan Omar voted FOR clean water project in Limuru Ward",
-    time: "2 hrs ago",
-    channel: "SMS",
-  },
-  {
-    id: "a6",
-    type: "feedback" as const,
-    text: "Grace Njeri suggested a weekly farmers market for Agikuyu ward",
-    time: "3 hrs ago",
-    channel: "USSD",
-  },
-];
-
 // --- Custom tooltip component ---
 function CustomTooltip({
   active,
@@ -223,46 +169,127 @@ function MiniSparkline({
 }
 
 export function Dashboard() {
-  const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [respondingTo, setRespondingTo] = useState<Id<"feedback"> | null>(null);
   const [responseText, setResponseText] = useState("");
-  const [localFeedbacks, setLocalFeedbacks] = useState(feedbacks);
   const [feedbackFilter, setFeedbackFilter] = useState<
     "all" | "pending" | "responded"
   >("all");
   const [dateRange, setDateRange] = useState("30d");
 
-  const totalVotes = votes.length;
-  const ussdVotes = votes.filter((v) => v.channel === "ussd").length;
-  const webVotes = votes.filter((v) => v.channel === "web").length;
-  const pendingFeedback = localFeedbacks.filter(
-    (f) => f.status === "pending"
-  ).length;
-  const activeBills = bills.filter((b) => b.status === "open").length;
+  // Convex queries
+  const stats = useQuery(api.dashboard.getStats);
+  const engagementData = useQuery(api.dashboard.getEngagementByMonth);
+  const sentimentData = useQuery(api.dashboard.getSentimentByCounty);
+  const channelData = useQuery(api.dashboard.getChannelDistribution);
+  const topIssuesData = useQuery(api.dashboard.getTopIssues);
+  const recentActivity = useQuery(api.dashboard.getRecentActivity);
+  const feedbackList = useQuery(api.feedback.list, {});
+  const billsList = useQuery(api.bills.list, {});
+  const budgetItemsList = useQuery(api.budgetItems.list, {});
 
-  const filteredFeedbacks =
-    feedbackFilter === "all"
-      ? localFeedbacks
-      : localFeedbacks.filter((f) => f.status === feedbackFilter);
+  // Convex mutation
+  const respondToFeedback = useMutation(api.feedback.respond);
 
-  const handleRespond = (feedbackId: string) => {
+  const handleRespond = async (feedbackId: Id<"feedback">) => {
     if (!responseText.trim()) return;
-    setLocalFeedbacks((prev) =>
-      prev.map((f) =>
-        f.id === feedbackId
-          ? { ...f, status: "responded" as const, response: responseText }
-          : f
-      )
-    );
+    await respondToFeedback({ feedbackId, response: responseText });
     setRespondingTo(null);
     setResponseText("");
   };
 
+  const totalVotes = stats?.totalVotes ?? 0;
+  const ussdVotes = stats?.ussdVotes ?? 0;
+  const webVotes = stats?.webVotes ?? 0;
+  const pendingFeedback = stats?.pendingFeedback ?? 0;
+  const activeBills = stats?.activeBills ?? 0;
+  const totalCitizens = stats?.totalCitizens ?? 0;
+  const verifiedCitizens = stats?.verifiedCitizens ?? 0;
+  const counties = stats?.counties ?? [];
+
+  const filteredFeedbacks =
+    feedbackFilter === "all"
+      ? (feedbackList ?? [])
+      : (feedbackList ?? []).filter((f) => f.status === feedbackFilter);
+
   const channelColors = ["#22c55e", "#3b82f6", "#f59e0b"];
 
-  const totalChannelVotes = channelDistribution.reduce(
+  const totalChannelVotes = (channelData ?? []).reduce(
     (sum, c) => sum + c.value,
     0
   );
+
+  // Loading state
+  if (
+    stats === undefined ||
+    engagementData === undefined ||
+    sentimentData === undefined ||
+    channelData === undefined ||
+    topIssuesData === undefined ||
+    feedbackList === undefined ||
+    billsList === undefined ||
+    budgetItemsList === undefined
+  ) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+                S
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold leading-tight">
+                  Sauti-Link
+                </h1>
+                <p className="text-xs text-muted-foreground">Admin Console</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-[1440px] px-6 py-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Loading real-time data...
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="relative overflow-hidden">
+                <CardContent className="pt-6">
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-3 w-24 rounded bg-muted" />
+                    <div className="h-8 w-16 rounded bg-muted" />
+                    <div className="h-3 w-32 rounded bg-muted" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 w-48 rounded bg-muted" />
+                  <div className="h-[350px] rounded bg-muted" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 w-32 rounded bg-muted" />
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-12 rounded bg-muted" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -364,7 +391,7 @@ export function Dashboard() {
                     Total Citizens
                   </p>
                   <p className="mt-1 text-3xl font-bold tabular-nums">
-                    {citizens.length.toLocaleString()}
+                    {totalCitizens.toLocaleString()}
                   </p>
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-950 dark:text-green-400">
@@ -386,12 +413,10 @@ export function Dashboard() {
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                 <CheckCircle className="h-3 w-3 text-green-500" />
                 <span>
-                  {citizens.filter((c) => c.verified).length} verified (
-                  {Math.round(
-                    (citizens.filter((c) => c.verified).length /
-                      citizens.length) *
-                      100
-                  )}
+                  {verifiedCitizens} verified (
+                  {totalCitizens > 0
+                    ? Math.round((verifiedCitizens / totalCitizens) * 100)
+                    : 0}
                   %)
                 </span>
               </div>
@@ -466,8 +491,8 @@ export function Dashboard() {
                 </div>
               </div>
               <div className="mt-3 text-xs text-muted-foreground">
-                Across {new Set(bills.map((b) => b.county)).size} counties
-                &middot; {bills.filter((b) => b.status === "draft").length}{" "}
+                Across {counties.length} counties
+                &middot; {billsList.filter((b) => b.status === "draft").length}{" "}
                 drafts
               </div>
             </CardContent>
@@ -546,7 +571,7 @@ export function Dashboard() {
                   <CardContent>
                     <div className="h-[350px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={engagementByMonth}>
+                        <AreaChart data={engagementData ?? []}>
                           <defs>
                             <linearGradient
                               id="gradUssd"
@@ -646,7 +671,7 @@ export function Dashboard() {
                   <CardContent>
                     <div className="h-[350px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={sentimentByCounty} barGap={2}>
+                        <BarChart data={sentimentData ?? []} barGap={2}>
                           <CartesianGrid
                             strokeDasharray="3 3"
                             className="stroke-border"
@@ -706,7 +731,7 @@ export function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-5">
-                      {topIssues.map((issue, i) => {
+                      {(topIssuesData ?? []).map((issue, i) => {
                         const colors = [
                           "bg-primary",
                           "bg-blue-500",
@@ -751,7 +776,7 @@ export function Dashboard() {
 
               <TabsContent value="votes" className="mt-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  {budgetItems.map((item) => {
+                  {(budgetItemsList ?? []).map((item) => {
                     const total = item.votesFor + item.votesAgainst;
                     const forPercent =
                       total > 0
@@ -759,7 +784,7 @@ export function Dashboard() {
                         : 0;
                     const isPassing = forPercent >= 50;
                     return (
-                      <Card key={item.id}>
+                      <Card key={item._id}>
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -837,7 +862,7 @@ export function Dashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={channelDistribution}
+                            data={channelData ?? []}
                             cx="50%"
                             cy="50%"
                             innerRadius={50}
@@ -846,7 +871,7 @@ export function Dashboard() {
                             dataKey="value"
                             strokeWidth={0}
                           >
-                            {channelDistribution.map((_, i) => (
+                            {(channelData ?? []).map((_, i) => (
                               <Cell key={i} fill={channelColors[i]} />
                             ))}
                           </Pie>
@@ -855,10 +880,11 @@ export function Dashboard() {
                       </ResponsiveContainer>
                     </div>
                     <div className="flex-1 space-y-3">
-                      {channelDistribution.map((ch, i) => {
-                        const pct = Math.round(
-                          (ch.value / totalChannelVotes) * 100
-                        );
+                      {(channelData ?? []).map((ch, i) => {
+                        const pct =
+                          totalChannelVotes > 0
+                            ? Math.round((ch.value / totalChannelVotes) * 100)
+                            : 0;
                         const icons = [
                           <Smartphone
                             key="ussd"
@@ -1059,7 +1085,7 @@ export function Dashboard() {
                     const priority = priorityMap[fb.category];
                     return (
                       <div
-                        key={fb.id}
+                        key={fb._id}
                         className="rounded-lg border border-border p-4 transition-colors hover:bg-muted/30"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1133,19 +1159,19 @@ export function Dashboard() {
                         )}
 
                         {fb.status === "pending" &&
-                          respondingTo !== fb.id && (
+                          respondingTo !== fb._id && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="mt-3 gap-1.5"
-                              onClick={() => setRespondingTo(fb.id)}
+                              onClick={() => setRespondingTo(fb._id)}
                             >
                               <Send className="h-3.5 w-3.5" />
                               Respond
                             </Button>
                           )}
 
-                        {respondingTo === fb.id && (
+                        {respondingTo === fb._id && (
                           <div className="mt-3 space-y-2 rounded-lg border border-border bg-muted/30 p-3">
                             <p className="text-xs font-medium text-muted-foreground">
                               Write your response:
@@ -1161,7 +1187,7 @@ export function Dashboard() {
                               <Button
                                 size="sm"
                                 className="gap-1.5"
-                                onClick={() => handleRespond(fb.id)}
+                                onClick={() => handleRespond(fb._id)}
                               >
                                 <Send className="h-3.5 w-3.5" />
                                 Send Response
@@ -1206,8 +1232,8 @@ export function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-0">
-                  {recentActivity.map((item, i) => (
-                    <div key={item.id}>
+                  {(recentActivity ?? []).map((item, i) => (
+                    <div key={`${item.type}-${item.timestamp}-${i}`}>
                       <div className="flex gap-3 py-3">
                         <div
                           className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${
@@ -1224,26 +1250,38 @@ export function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs leading-relaxed">
-                            {item.text}
+                            {item.type === "vote"
+                              ? `Vote cast via ${(item.data as { channel: string }).channel}`
+                              : `Feedback submitted: ${(item.data as { message: string }).message?.slice(0, 80)}...`}
                           </p>
                           <div className="mt-1 flex items-center gap-2">
                             <span className="text-[10px] text-muted-foreground">
-                              {item.time}
+                              {new Date(item.timestamp).toLocaleString("en-KE", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
                             </span>
                             <Badge
                               variant="outline"
                               className="h-4 px-1 text-[10px]"
                             >
-                              {item.channel}
+                              {item.type === "vote"
+                                ? (item.data as { channel: string }).channel?.toUpperCase()
+                                : "Feedback"}
                             </Badge>
                           </div>
                         </div>
                       </div>
-                      {i < recentActivity.length - 1 && (
+                      {i < (recentActivity ?? []).length - 1 && (
                         <Separator />
                       )}
                     </div>
                   ))}
+                  {(recentActivity ?? []).length === 0 && (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                      No recent activity.
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

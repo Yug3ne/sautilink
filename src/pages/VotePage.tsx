@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { budgetItems, bills } from "@/data/dummy";
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
   Card,
   CardContent,
@@ -32,6 +34,7 @@ import {
   Lock,
   Vote,
   X,
+  Loader2,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -62,22 +65,58 @@ function progressGradientColor(forPercent: number): string {
 export function VotePage() {
   const [language, setLanguage] = useState<"en" | "sw">("en");
   const [searchTerm, setSearchTerm] = useState("");
-  const [votedItems, setVotedItems] = useState<
-    Record<string, "for" | "against">
-  >({});
   const [verified, setVerified] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [nationalId, setNationalId] = useState("");
   const [countyFilter, setCountyFilter] = useState("all");
   const [wardFilter, setWardFilter] = useState("all");
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
+  const [citizenId, setCitizenId] = useState<Id<"citizens"> | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const t = language === "en";
+
+  // ── Convex queries & mutations ────────────────────────────────────────
+  const budgetItemsData = useQuery(api.budgetItems.list, {});
+  const billsData = useQuery(api.bills.list, {});
+  const simulateIPRS = useAction(api.actions.simulateIPRSVerification);
+  const registerCitizen = useMutation(api.citizens.register);
+  const castVote = useMutation(api.votes.cast);
+
+  // Query citizen by national ID after verification to get/register them
+  const existingCitizen = useQuery(
+    api.citizens.getByNationalId,
+    verified && nationalId.length === 8 ? { nationalId } : "skip",
+  );
+
+  // Once we have the citizen from the query, store their ID
+  useEffect(() => {
+    if (existingCitizen && !citizenId) {
+      setCitizenId(existingCitizen._id);
+    }
+  }, [existingCitizen, citizenId]);
+
+  // Query citizen's existing votes
+  const citizenVotes = useQuery(
+    api.votes.getByCitizen,
+    citizenId ? { citizenId } : "skip",
+  );
+
+  // Derive votedItems from citizen's votes
+  const votedItems: Record<string, "for" | "against"> = {};
+  citizenVotes?.forEach((v) => {
+    votedItems[v.budgetItemId] = v.vote;
+  });
+
+  // Use budgetItemsData or empty array while loading
+  const budgetItems = budgetItemsData ?? [];
+  const bills = billsData ?? [];
 
   // Derive unique counties and wards from data
   const counties = useMemo(
     () => [...new Set(budgetItems.map((i) => i.county))].sort(),
-    [],
+    [budgetItems],
   );
   const wards = useMemo(() => {
     const items =
@@ -85,25 +124,87 @@ export function VotePage() {
         ? budgetItems
         : budgetItems.filter((i) => i.county === countyFilter);
     return [...new Set(items.map((i) => i.ward))].sort();
-  }, [countyFilter]);
+  }, [countyFilter, budgetItems]);
 
   // Reset ward when county changes
   useEffect(() => {
     setWardFilter("all");
   }, [countyFilter]);
 
-  const handleVerify = () => {
-    if (nationalId.length === 8 && /^\d+$/.test(nationalId)) {
+  const handleVerify = async () => {
+    if (nationalId.length !== 8 || !/^\d+$/.test(nationalId)) return;
+
+    setVerifying(true);
+    setVerifyError(null);
+
+    try {
+      const result = await simulateIPRS({ nationalId });
+
+      if (!result.verified) {
+        setVerifyError(
+          t
+            ? "Verification failed. Please check your ID."
+            : "Uthibitisho umeshindwa. Tafadhali angalia kitambulisho chako.",
+        );
+        setVerifying(false);
+        return;
+      }
+
+      // IPRS returned verified - now check if citizen exists in DB
+      // We set verified=true which enables the getByNationalId query
+      // But we also need to handle the case where citizen doesn't exist yet
+      // So we register them proactively if needed
+
+      // Try to register (will throw if already exists, which is fine)
+      try {
+        const newCitizenId = await registerCitizen({
+          nationalId,
+          name: result.name ?? "Verified Citizen",
+          county: result.county ?? "Nairobi",
+          ward: result.ward ?? "Westlands",
+          phone: "",
+          language,
+          verified: true,
+        });
+        setCitizenId(newCitizenId);
+      } catch {
+        // Citizen already exists - the useQuery will pick them up
+        // We just need to wait for existingCitizen query to resolve
+      }
+
       setShowWelcome(true);
       setTimeout(() => {
         setVerified(true);
         setShowWelcome(false);
       }, 2200);
+    } catch (err) {
+      console.error(err);
+      setVerifyError(
+        t
+          ? "An error occurred during verification."
+          : "Hitilafu imetokea wakati wa uthibitisho.",
+      );
+    } finally {
+      setVerifying(false);
     }
   };
 
-  const handleVote = (itemId: string, vote: "for" | "against") => {
-    setVotedItems((prev) => ({ ...prev, [itemId]: vote }));
+  const handleVote = async (
+    itemId: Id<"budgetItems">,
+    vote: "for" | "against",
+  ) => {
+    if (!citizenId) return;
+    try {
+      await castVote({
+        citizenId,
+        budgetItemId: itemId,
+        vote,
+        channel: "web",
+      });
+    } catch (err) {
+      // Handle duplicate vote error
+      console.error(err);
+    }
   };
 
   const filtered = budgetItems.filter((item) => {
@@ -114,7 +215,9 @@ export function VotePage() {
     const matchesCounty =
       countyFilter === "all" || item.county === countyFilter;
     const matchesWard = wardFilter === "all" || item.ward === wardFilter;
-    return item.status === "active" && matchesSearch && matchesCounty && matchesWard;
+    return (
+      item.status === "active" && matchesSearch && matchesCounty && matchesWard
+    );
   });
 
   const totalActive = budgetItems.filter((i) => i.status === "active").length;
@@ -198,7 +301,9 @@ export function VotePage() {
                   className="pl-9 font-mono tracking-widest"
                   placeholder={t ? "e.g. 29384756" : "k.m. 29384756"}
                   value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) =>
+                    setNationalId(e.target.value.replace(/\D/g, ""))
+                  }
                   maxLength={8}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleVerify();
@@ -224,14 +329,28 @@ export function VotePage() {
               </div>
             </div>
 
+            {verifyError && (
+              <p className="text-sm text-red-600">{verifyError}</p>
+            )}
+
             <Button
               onClick={handleVerify}
-              disabled={nationalId.length !== 8}
+              disabled={nationalId.length !== 8 || verifying}
               className="w-full gap-2"
               size="default"
             >
-              <Shield className="h-4 w-4" />
-              {t ? "Verify & Continue" : "Thibitisha na Endelea"}
+              {verifying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Shield className="h-4 w-4" />
+              )}
+              {verifying
+                ? t
+                  ? "Verifying..."
+                  : "Inathibitisha..."
+                : t
+                  ? "Verify & Continue"
+                  : "Thibitisha na Endelea"}
             </Button>
 
             <div className="flex items-center gap-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/50 p-3">
@@ -256,6 +375,21 @@ export function VotePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // ── Loading state ─────────────────────────────────────────────────────
+
+  if (budgetItemsData === undefined || billsData === undefined) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            {t ? "Loading budget items..." : "Inapakia vipengele vya bajeti..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -420,20 +554,20 @@ export function VotePage() {
       {/* Budget Items */}
       <div className="flex flex-col gap-5">
         {filtered.map((item) => {
-          const bill = bills.find((b) => b.id === item.billId);
+          const bill = bills.find((b) => b._id === item.billId);
           const total = item.votesFor + item.votesAgainst;
           const forPercent =
             total > 0 ? Math.round((item.votesFor / total) * 100) : 0;
           const againstPercent = 100 - forPercent;
           const desc = t ? item.description : item.descriptionSw;
-          const voted = votedItems[item.id];
+          const voted = votedItems[item._id];
           const daysLeft = daysUntil(item.deadline);
           const urgencyClass = deadlineUrgencyColor(daysLeft);
-          const isInfoExpanded = expandedInfo === item.id;
+          const isInfoExpanded = expandedInfo === item._id;
 
           return (
             <Card
-              key={item.id}
+              key={item._id}
               className={`transition-all duration-300 hover:shadow-lg ${
                 voted
                   ? "border-green-200 bg-green-50/30 ring-green-200/50"
@@ -452,7 +586,9 @@ export function VotePage() {
                         {/* Info button */}
                         <button
                           onClick={() =>
-                            setExpandedInfo(isInfoExpanded ? null : item.id)
+                            setExpandedInfo(
+                              isInfoExpanded ? null : item._id,
+                            )
                           }
                           className="mt-0.5 shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           aria-label={t ? "More info" : "Maelezo zaidi"}
@@ -621,14 +757,14 @@ export function VotePage() {
                   ) : (
                     <div className="flex gap-3">
                       <Button
-                        onClick={() => handleVote(item.id, "for")}
+                        onClick={() => handleVote(item._id, "for")}
                         className="flex-1 gap-2 bg-green-600 shadow-sm transition-all hover:bg-green-700 hover:shadow-md active:scale-[0.98]"
                       >
                         <ThumbsUp className="h-4 w-4" />
                         {t ? "Vote For" : "Piga Kura Kwa"}
                       </Button>
                       <Button
-                        onClick={() => handleVote(item.id, "against")}
+                        onClick={() => handleVote(item._id, "against")}
                         variant="destructive"
                         className="flex-1 gap-2 shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
                       >

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { budgetItems, bills } from "@/data/dummy";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,8 +39,8 @@ interface USSDState {
   screen: Screen;
   language: "en" | "sw";
   verified: boolean;
-  selectedBillId: string | null;
-  selectedBudgetItemId: string | null;
+  selectedBillId: Id<"bills"> | null;
+  selectedBudgetItemId: Id<"budgetItems"> | null;
   selectedVote: "for" | "against" | null;
 }
 
@@ -124,6 +126,12 @@ export function USSDSimulator() {
   const screenRef = useRef<HTMLDivElement>(null);
   const currentTime = useCurrentTime();
 
+  // Convex queries for real data
+  const billsData = useQuery(api.bills.list, {});
+  const budgetItemsData = useQuery(api.budgetItems.list, {});
+
+  const dataLoading = billsData === undefined || budgetItemsData === undefined;
+
   const t = useCallback(
     (en: string, sw: string) => (state.language === "en" ? en : sw),
     [state.language],
@@ -138,6 +146,8 @@ export function USSDSimulator() {
   };
 
   const getScreenContent = useCallback((): string => {
+    if (dataLoading) return "Loading data...";
+
     switch (state.screen) {
       case "welcome":
         return "Welcome to Sauti-Link\nKaribu Sauti-Link\n\n1. English\n2. Kiswahili";
@@ -155,7 +165,7 @@ export function USSDSimulator() {
         );
 
       case "bills": {
-        const openBills = bills.filter((b) => b.status === "open");
+        const openBills = billsData?.filter((b) => b.status === "open") ?? [];
         const list = openBills
           .map(
             (b, i) =>
@@ -170,7 +180,7 @@ export function USSDSimulator() {
       }
 
       case "bill_detail": {
-        const bill = bills.find((b) => b.id === state.selectedBillId);
+        const bill = billsData?.find((b) => b._id === state.selectedBillId);
         if (!bill) return "Error";
         const summary = (
           state.language === "en" ? bill.summaryEn : bill.summarySw
@@ -186,7 +196,7 @@ export function USSDSimulator() {
       }
 
       case "vote_list": {
-        const items = budgetItems.filter((bi) => bi.status === "active");
+        const items = budgetItemsData?.filter((bi) => bi.status === "active") ?? [];
         const list = items
           .map(
             (bi, i) =>
@@ -201,8 +211,8 @@ export function USSDSimulator() {
       }
 
       case "vote_confirm": {
-        const item = budgetItems.find(
-          (bi) => bi.id === state.selectedBudgetItemId,
+        const item = budgetItemsData?.find(
+          (bi) => bi._id === state.selectedBudgetItemId,
         );
         if (!item) return "Error";
         const desc = (
@@ -244,7 +254,7 @@ export function USSDSimulator() {
       default:
         return "";
     }
-  }, [state, t]);
+  }, [state, t, billsData, budgetItemsData, dataLoading]);
 
   // Typing animation effect
   useEffect(() => {
@@ -312,12 +322,12 @@ export function USSDSimulator() {
         if (val === "0") {
           setState((s) => ({ ...s, screen: "menu" }));
         } else {
-          const openBills = bills.filter((b) => b.status === "open");
+          const openBills = billsData?.filter((b) => b.status === "open") ?? [];
           const idx = parseInt(val) - 1;
           if (idx >= 0 && idx < openBills.length) {
             setState((s) => ({
               ...s,
-              selectedBillId: openBills[idx].id,
+              selectedBillId: openBills[idx]._id,
               screen: "bill_detail",
             }));
           }
@@ -333,14 +343,14 @@ export function USSDSimulator() {
         if (val === "0") {
           setState((s) => ({ ...s, screen: "menu" }));
         } else {
-          const activeItems = budgetItems.filter(
+          const activeItems = budgetItemsData?.filter(
             (bi) => bi.status === "active",
-          );
+          ) ?? [];
           const idx = parseInt(val) - 1;
           if (idx >= 0 && idx < activeItems.length) {
             setState((s) => ({
               ...s,
-              selectedBudgetItemId: activeItems[idx].id,
+              selectedBudgetItemId: activeItems[idx]._id,
               screen: "vote_confirm",
             }));
           }
@@ -540,7 +550,27 @@ export function USSDSimulator() {
                   ref={screenRef}
                   className="relative min-h-[260px] max-h-[280px] overflow-y-auto px-3 py-3"
                 >
-                  {isLoading ? (
+                  {dataLoading ? (
+                    <div className="flex flex-col items-center gap-3 pt-8">
+                      <div className="flex gap-1">
+                        <div
+                          className="h-2 w-2 animate-bounce rounded-full bg-green-400"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <div
+                          className="h-2 w-2 animate-bounce rounded-full bg-green-400"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <div
+                          className="h-2 w-2 animate-bounce rounded-full bg-green-400"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </div>
+                      <span className="text-[11px] text-zinc-400">
+                        Connecting to network...
+                      </span>
+                    </div>
+                  ) : isLoading ? (
                     <div className="flex items-center gap-2 pt-4">
                       <div className="flex gap-1">
                         <div

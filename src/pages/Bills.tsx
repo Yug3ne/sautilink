@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { bills, budgetItems, mcas } from "@/data/dummy";
-import type { Bill } from "@/data/dummy";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,36 +83,85 @@ function estimateReadTime(points: string[]): number {
   return Math.max(1, Math.ceil(totalWords / 200));
 }
 
-function getBillEngagement(billId: string): number {
-  const items = budgetItems.filter((bi) => bi.billId === billId);
-  return items.reduce((sum, bi) => sum + bi.votesFor + bi.votesAgainst, 0);
-}
-
 // --- Component ---
 
 export function Bills() {
   const [language, setLanguage] = useState<"en" | "sw">("en");
-  const [expandedBill, setExpandedBill] = useState<string | null>("b1");
+  const [expandedBill, setExpandedBill] = useState<string | null>(null);
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  const getMca = (id: string) => mcas.find((m) => m.id === id);
+  // Convex queries
+  const allBills = useQuery(api.bills.list, {});
+  const allBudgetItems = useQuery(api.budgetItems.list, {});
+  const mcasList = useQuery(api.mcas.list, {});
 
-  // Derive unique values for filters
-  const counties = useMemo(() => [...new Set(bills.map((b) => b.county))], []);
-  const statuses = useMemo(() => [...new Set(bills.map((b) => b.status))], []);
-  const categories = useMemo(() => [...new Set(bills.map((b) => b.category))], []);
+  const getMca = (id: Id<"mcas">) => mcasList?.find((m) => m._id === id);
 
-  // Filtered bills
+  const getBillEngagement = (billId: Id<"bills">): number => {
+    if (!allBudgetItems) return 0;
+    const items = allBudgetItems.filter((bi) => bi.billId === billId);
+    return items.reduce((sum, bi) => sum + bi.votesFor + bi.votesAgainst, 0);
+  };
+
+  // Derive unique values for filters from all bills
+  const counties = useMemo(
+    () => (allBills ? [...new Set(allBills.map((b) => b.county))] : []),
+    [allBills]
+  );
+  const statuses = useMemo(
+    () => (allBills ? [...new Set(allBills.map((b) => b.status))] : []),
+    [allBills]
+  );
+  const categories = useMemo(
+    () => (allBills ? [...new Set(allBills.map((b) => b.category))] : []),
+    [allBills]
+  );
+
+  // Client-side filtering
   const filteredBills = useMemo(() => {
-    return bills.filter((b) => {
+    if (!allBills) return [];
+    return allBills.filter((b) => {
       if (countyFilter !== "all" && b.county !== countyFilter) return false;
       if (statusFilter !== "all" && b.status !== statusFilter) return false;
       if (categoryFilter !== "all" && b.category !== categoryFilter) return false;
       return true;
     });
-  }, [countyFilter, statusFilter, categoryFilter]);
+  }, [allBills, countyFilter, statusFilter, categoryFilter]);
+
+  // Auto-expand the first bill once loaded
+  const firstBillId = filteredBills[0]?._id ?? null;
+  if (expandedBill === null && firstBillId !== null) {
+    setExpandedBill(firstBillId);
+  }
+
+  // Loading state
+  if (allBills === undefined || allBudgetItems === undefined || mcasList === undefined) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="h-10 w-72 animate-pulse rounded-lg bg-muted" />
+            <div className="mt-3 h-5 w-96 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-9 w-28 animate-pulse rounded-md bg-muted" />
+        </div>
+        <Separator className="my-8" />
+        <div className="mb-6 h-14 animate-pulse rounded-lg bg-muted/40" />
+        <div className="mb-8 flex gap-3">
+          <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />
+          <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />
+          <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />
+        </div>
+        <div className="flex flex-col gap-5">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-48 animate-pulse rounded-xl border bg-muted/30" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const openCount = filteredBills.filter((b) => b.status === "open").length;
   const uniqueCounties = new Set(filteredBills.map((b) => b.county)).size;
@@ -236,12 +286,13 @@ export function Bills() {
         <div className="flex flex-col gap-5">
           {filteredBills.map((bill) => (
             <BillCard
-              key={bill.id}
+              key={bill._id}
               bill={bill}
               language={language}
-              isExpanded={expandedBill === bill.id}
-              onToggle={() => setExpandedBill(expandedBill === bill.id ? null : bill.id)}
+              isExpanded={expandedBill === bill._id}
+              onToggle={() => setExpandedBill(expandedBill === bill._id ? null : bill._id)}
               mca={getMca(bill.uploadedBy)}
+              engagement={getBillEngagement(bill._id)}
             />
           ))}
         </div>
@@ -273,18 +324,18 @@ function EmptyState({ language }: { language: "en" | "sw" }) {
 // --- Bill card ---
 
 interface BillCardProps {
-  bill: Bill;
+  bill: Doc<"bills">;
   language: "en" | "sw";
   isExpanded: boolean;
   onToggle: () => void;
-  mca: ReturnType<typeof mcas.find>;
+  mca: Doc<"mcas"> | undefined;
+  engagement: number;
 }
 
-function BillCard({ bill, language, isExpanded, onToggle, mca }: BillCardProps) {
+function BillCard({ bill, language, isExpanded, onToggle, mca, engagement }: BillCardProps) {
   const title = language === "en" ? bill.title : bill.titleSw;
   const summary = language === "en" ? bill.summaryEn : bill.summarySw;
   const readTime = estimateReadTime(summary);
-  const engagement = getBillEngagement(bill.id);
   const CategoryIcon = categoryIcons[bill.category];
   const pointIcons = summaryPointIcons[bill.category];
 
