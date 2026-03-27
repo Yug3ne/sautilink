@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { validateSession } from "./auth";
 
 export const list = query({
   args: {},
@@ -22,5 +23,15 @@ export const getByWard = query({
       .query("mcas")
       .withIndex("by_ward", (q) => q.eq("ward", args.ward))
       .first();
+  },
+});
+
+export const listAll = query({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, args) => {
+    const { role } = await validateSession(ctx, args.sessionToken);
+    if (role !== "superadmin") throw new Error("Unauthorized");
+    const mcas = await ctx.db.query("mcas").collect();
+    return mcas.map((m) => ({ ...m, passwordHash: undefined }));
   },
 });

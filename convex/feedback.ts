@@ -1,18 +1,32 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { validateSession } from "./auth";
 
 export const list = query({
   args: {
+    sessionToken: v.optional(v.string()),
     mcaId: v.optional(v.id("mcas")),
     status: v.optional(v.union(v.literal("pending"), v.literal("responded"))),
   },
   handler: async (ctx, args) => {
+    let scopeMcaId: any;
+
+    if (args.sessionToken) {
+      const session = await validateSession(ctx, args.sessionToken);
+      if (session.role !== "superadmin") {
+        scopeMcaId = session.mcaId;
+      }
+    }
+
+    // MCA session overrides the mcaId filter
+    const effectiveMcaId = scopeMcaId ?? args.mcaId;
+
     let results;
 
-    if (args.mcaId) {
+    if (effectiveMcaId) {
       results = await ctx.db
         .query("feedback")
-        .withIndex("by_mcaId", (q) => q.eq("mcaId", args.mcaId!))
+        .withIndex("by_mcaId", (q) => q.eq("mcaId", effectiveMcaId))
         .collect();
     } else if (args.status) {
       results = await ctx.db
@@ -23,7 +37,7 @@ export const list = query({
       results = await ctx.db.query("feedback").collect();
     }
 
-    if (args.mcaId && args.status) {
+    if (effectiveMcaId && args.status) {
       results = results.filter((f) => f.status === args.status);
     }
 
@@ -59,10 +73,20 @@ export const submit = mutation({
 
 export const respond = mutation({
   args: {
+    sessionToken: v.optional(v.string()),
     feedbackId: v.id("feedback"),
     response: v.string(),
   },
   handler: async (ctx, args) => {
+    if (args.sessionToken) {
+      const session = await validateSession(ctx, args.sessionToken);
+      if (session.role !== "superadmin") {
+        const fb = await ctx.db.get(args.feedbackId);
+        if (!fb || fb.mcaId !== session.mcaId) {
+          throw new Error("You can only respond to feedback addressed to you");
+        }
+      }
+    }
     await ctx.db.patch(args.feedbackId, {
       status: "responded",
       response: args.response,

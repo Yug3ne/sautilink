@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Card,
   CardContent,
@@ -169,6 +170,7 @@ function MiniSparkline({
 }
 
 export function Dashboard() {
+  const { sessionToken } = useAuth();
   const [respondingTo, setRespondingTo] = useState<Id<"feedback"> | null>(null);
   const [responseText, setResponseText] = useState("");
   const [feedbackFilter, setFeedbackFilter] = useState<
@@ -176,23 +178,37 @@ export function Dashboard() {
   >("all");
   const [dateRange, setDateRange] = useState("30d");
 
-  // Convex queries
-  const stats = useQuery(api.dashboard.getStats);
-  const engagementData = useQuery(api.dashboard.getEngagementByMonth);
-  const sentimentData = useQuery(api.dashboard.getSentimentByCounty);
-  const channelData = useQuery(api.dashboard.getChannelDistribution);
-  const topIssuesData = useQuery(api.dashboard.getTopIssues);
-  const recentActivity = useQuery(api.dashboard.getRecentActivity);
-  const feedbackList = useQuery(api.feedback.list, {});
-  const billsList = useQuery(api.bills.list, {});
-  const budgetItemsList = useQuery(api.budgetItems.list, {});
+  // Convex queries - pass sessionToken to scope results
+  const sessionArgs = sessionToken ? { sessionToken } : {};
+  const stats = useQuery(api.dashboard.getStats, sessionArgs);
+  const engagementData = useQuery(api.dashboard.getEngagementByMonth, sessionArgs);
+  const sentimentData = useQuery(api.dashboard.getSentimentByCounty, sessionArgs);
+  const channelData = useQuery(api.dashboard.getChannelDistribution, sessionArgs);
+  const topIssuesData = useQuery(api.dashboard.getTopIssues, sessionArgs);
+  const recentActivity = useQuery(api.dashboard.getRecentActivity, sessionArgs);
+  const feedbackList = useQuery(
+    api.feedback.list,
+    sessionToken ? { sessionToken } : {}
+  );
+  const billsList = useQuery(
+    api.bills.list,
+    sessionToken ? { sessionToken } : {}
+  );
+  const budgetItemsList = useQuery(
+    api.budgetItems.list,
+    sessionToken ? { sessionToken } : {}
+  );
 
   // Convex mutation
   const respondToFeedback = useMutation(api.feedback.respond);
 
   const handleRespond = async (feedbackId: Id<"feedback">) => {
     if (!responseText.trim()) return;
-    await respondToFeedback({ feedbackId, response: responseText });
+    await respondToFeedback({
+      feedbackId,
+      response: responseText,
+      ...(sessionToken ? { sessionToken } : {}),
+    });
     setRespondingTo(null);
     setResponseText("");
   };

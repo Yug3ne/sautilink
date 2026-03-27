@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -11,19 +12,37 @@ import {
   Vote,
   MessageSquare,
   Users,
+  Settings,
   Bell,
   Menu,
   Phone,
   Link2,
   X,
+  LogOut,
+  Loader2,
+  MapPin,
 } from "lucide-react";
 
-const sidebarLinks = [
+interface SidebarLink {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  end?: boolean;
+  superAdminOnly?: boolean;
+}
+
+const sidebarLinks: SidebarLink[] = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/dashboard/bills", label: "Bills Management", icon: FileText },
   { to: "/dashboard/votes", label: "Vote Results", icon: Vote },
   { to: "/dashboard/feedback", label: "Citizen Feedback", icon: MessageSquare },
   { to: "/dashboard/citizens", label: "Citizens", icon: Users },
+  {
+    to: "/dashboard/manage-mcas",
+    label: "Manage MCAs",
+    icon: Settings,
+    superAdminOnly: true,
+  },
 ];
 
 function isActiveLink(pathname: string, to: string, end?: boolean) {
@@ -68,8 +87,29 @@ function SautiLogo() {
   );
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function SidebarContent({
+  onNavigate,
+  isSuperAdmin,
+  mca,
+}: {
+  onNavigate?: () => void;
+  isSuperAdmin: boolean;
+  mca: any;
+}) {
   const location = useLocation();
+
+  const visibleLinks = sidebarLinks.filter(
+    (link) => !link.superAdminOnly || isSuperAdmin
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -84,9 +124,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Separator />
 
+      {/* Scope indicator */}
+      {mca && (
+        <div className="mx-3 mt-3 flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2">
+          <MapPin className="h-3.5 w-3.5 text-primary" />
+          <span className="text-[11px] text-muted-foreground">
+            {isSuperAdmin
+              ? "Viewing: All Counties"
+              : `${mca.county} / ${mca.ward} Ward`}
+          </span>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-3">
-        {sidebarLinks.map((link) => {
+        {visibleLinks.map((link) => {
           const active = isActiveLink(location.pathname, link.to, link.end);
           return (
             <Link
@@ -124,6 +176,30 @@ export function DashboardLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pageTitle = getPageTitle(location.pathname);
+  const { mca, isLoading, isAuthenticated, isSuperAdmin, logout } = useAuth();
+
+  // Show loading spinner while session is being verified
+  if (isLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const initials = mca?.name ? getInitials(mca.name) : "??";
+  const displayName = mca?.name || "Unknown";
+  const wardLabel = isSuperAdmin
+    ? "Super Admin"
+    : `MCA, ${mca?.ward || "Unknown"} Ward`;
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -134,7 +210,7 @@ export function DashboardLayout() {
         {/* Desktop Sidebar */}
         <aside className="hidden w-64 shrink-0 border-r bg-sidebar lg:flex lg:flex-col">
           <KenyaFlagStripe />
-          <SidebarContent />
+          <SidebarContent isSuperAdmin={isSuperAdmin} mca={mca} />
         </aside>
 
         {/* Main area */}
@@ -167,14 +243,18 @@ export function DashboardLayout() {
                       </Button>
                     </div>
                     <KenyaFlagStripe />
-                    <SidebarContent onNavigate={() => setMobileOpen(false)} />
+                    <SidebarContent
+                      onNavigate={() => setMobileOpen(false)}
+                      isSuperAdmin={isSuperAdmin}
+                      mca={mca}
+                    />
                   </SheetContent>
                 </Sheet>
 
                 <h1 className="text-lg font-semibold">{pageTitle}</h1>
               </div>
 
-              {/* Right: notification + avatar */}
+              {/* Right: notification + avatar + logout */}
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-4 w-4" />
@@ -189,18 +269,26 @@ export function DashboardLayout() {
                 <div className="flex items-center gap-2.5">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                      PN
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden flex-col leading-none sm:flex">
-                    <span className="text-sm font-medium">
-                      Hon. Peter Njoroge
-                    </span>
+                    <span className="text-sm font-medium">{displayName}</span>
                     <span className="text-[11px] text-muted-foreground">
-                      MCA, Agikuyu Ward
+                      {wardLabel}
                     </span>
                   </div>
                 </div>
+
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={logout}
+                  title="Sign out"
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </header>

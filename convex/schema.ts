@@ -21,20 +21,44 @@ export default defineSchema({
     county: v.string(),
     party: v.string(),
     avatar: v.string(),
+    email: v.string(),
+    passwordHash: v.string(),
+    role: v.union(v.literal("mca"), v.literal("superadmin")),
+    isActive: v.boolean(),
   })
     .index("by_county", ["county"])
-    .index("by_ward", ["ward"]),
+    .index("by_ward", ["ward"])
+    .index("by_email", ["email"]),
+
+  sessions: defineTable({
+    mcaId: v.id("mcas"),
+    token: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_mcaId", ["mcaId"]),
 
   bills: defineTable({
     title: v.string(),
     titleSw: v.string(),
-    status: v.union(v.literal("draft"), v.literal("open"), v.literal("closed")),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("open"),
+      v.literal("closed")
+    ),
     county: v.string(),
+    ward: v.optional(v.string()),
     uploadedBy: v.id("mcas"),
     uploadedAt: v.string(),
     fullTextUrl: v.string(),
+    pdfFileId: v.optional(v.id("_storage")),
     summaryEn: v.array(v.string()),
     summarySw: v.array(v.string()),
+    simplifiedEn: v.optional(v.string()),
+    simplifiedSw: v.optional(v.string()),
+    detailedSummaryEn: v.optional(v.string()),
+    detailedSummarySw: v.optional(v.string()),
     category: v.union(
       v.literal("budget"),
       v.literal("health"),
@@ -46,7 +70,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_county", ["county"])
     .index("by_category", ["category"])
-    .index("by_county_status", ["county", "status"]),
+    .index("by_county_status", ["county", "status"])
+    .index("by_ward", ["ward"]),
 
   budgetItems: defineTable({
     billId: v.id("bills"),

@@ -9,11 +9,13 @@
  */
 
 import type * as actions from "../actions.js";
+import type * as auth from "../auth.js";
 import type * as bills from "../bills.js";
 import type * as budgetItems from "../budgetItems.js";
 import type * as citizens from "../citizens.js";
 import type * as dashboard from "../dashboard.js";
 import type * as feedback from "../feedback.js";
+import type * as lib_passwords from "../lib/passwords.js";
 import type * as mcas from "../mcas.js";
 import type * as seed from "../seed.js";
 import type * as votes from "../votes.js";
@@ -26,11 +28,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   actions: typeof actions;
+  auth: typeof auth;
   bills: typeof bills;
   budgetItems: typeof budgetItems;
   citizens: typeof citizens;
   dashboard: typeof dashboard;
   feedback: typeof feedback;
+  "lib/passwords": typeof lib_passwords;
   mcas: typeof mcas;
   seed: typeof seed;
   votes: typeof votes;

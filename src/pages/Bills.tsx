@@ -14,6 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Globe,
   FileText,
   ChevronDown,
@@ -33,6 +39,7 @@ import {
   BookOpen,
   Landmark,
   TreePine,
+  File,
 } from "lucide-react";
 
 // --- Color maps ---
@@ -321,6 +328,23 @@ function EmptyState({ language }: { language: "en" | "sw" }) {
   );
 }
 
+// --- PDF download button ---
+
+function PdfDownloadButton({ storageId, language }: { storageId: Id<"_storage">; language: "en" | "sw" }) {
+  const pdfUrl = useQuery(api.bills.getPdfUrl, { storageId });
+
+  if (!pdfUrl) return null;
+
+  return (
+    <Button variant="outline" size="sm" asChild className="gap-1.5 text-xs">
+      <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+        <File className="h-3.5 w-3.5 text-red-500" />
+        {language === "en" ? "Full Bill (PDF)" : "Muswada Kamili (PDF)"}
+      </a>
+    </Button>
+  );
+}
+
 // --- Bill card ---
 
 interface BillCardProps {
@@ -335,9 +359,13 @@ interface BillCardProps {
 function BillCard({ bill, language, isExpanded, onToggle, mca, engagement }: BillCardProps) {
   const title = language === "en" ? bill.title : bill.titleSw;
   const summary = language === "en" ? bill.summaryEn : bill.summarySw;
+  const simplified = language === "en" ? bill.simplifiedEn : bill.simplifiedSw;
+  const detailed = language === "en" ? bill.detailedSummaryEn : bill.detailedSummarySw;
   const readTime = estimateReadTime(summary);
   const CategoryIcon = categoryIcons[bill.category];
   const pointIcons = summaryPointIcons[bill.category];
+
+  const hasTabs = !!(simplified || detailed);
 
   return (
     <Card
@@ -382,8 +410,21 @@ function BillCard({ bill, language, isExpanded, onToggle, mca, engagement }: Bil
             <Badge className={categoryColors[bill.category]}>
               {bill.category.charAt(0).toUpperCase() + bill.category.slice(1)}
             </Badge>
+            {bill.pdfFileId && (
+              <Badge variant="outline" className="gap-1 bg-red-50 text-red-700 border-red-200">
+                <File className="h-3 w-3" />
+                PDF
+              </Badge>
+            )}
           </div>
         </div>
+
+        {/* Simplified summary preview (shown when collapsed) */}
+        {simplified && !isExpanded && (
+          <p className="mt-3 line-clamp-2 text-sm text-muted-foreground leading-relaxed">
+            {simplified}
+          </p>
+        )}
 
         {/* Engagement & read time row */}
         <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
@@ -409,30 +450,60 @@ function BillCard({ bill, language, isExpanded, onToggle, mca, engagement }: Bil
           className="mb-3 gap-1.5 text-primary"
         >
           <FileText className="h-4 w-4" />
-          {language === "en" ? "AI Summary (5 Key Points)" : "Muhtasari wa AI (Hoja 5 Muhimu)"}
+          {language === "en"
+            ? isExpanded ? "Hide Details" : "Read Full Summary"
+            : isExpanded ? "Ficha Maelezo" : "Soma Muhtasari Kamili"}
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </Button>
 
-        {/* Summary points with animation */}
+        {/* Expanded content with animation */}
         <div
           className={`grid transition-all duration-300 ease-in-out ${
             isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
           }`}
         >
           <div className="overflow-hidden">
-            <ol className="ml-1 flex flex-col gap-3 pt-1 pb-2">
-              {summary.map((point, i) => {
-                const PointIcon = pointIcons[i % pointIcons.length];
-                return (
-                  <li key={i} className="flex gap-3 text-sm leading-relaxed">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <PointIcon className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="pt-0.5">{point}</span>
-                  </li>
-                );
-              })}
-            </ol>
+            {hasTabs ? (
+              <Tabs defaultValue="summary" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="summary">
+                    {language === "en" ? "Key Points" : "Hoja Muhimu"}
+                  </TabsTrigger>
+                  {simplified && (
+                    <TabsTrigger value="simplified">
+                      {language === "en" ? "Simple Explanation" : "Maelezo Rahisi"}
+                    </TabsTrigger>
+                  )}
+                  {detailed && (
+                    <TabsTrigger value="detailed">
+                      {language === "en" ? "Detailed Summary" : "Muhtasari wa Kina"}
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+
+                <TabsContent value="summary">
+                  <SummaryPoints summary={summary} pointIcons={pointIcons} />
+                </TabsContent>
+
+                {simplified && (
+                  <TabsContent value="simplified">
+                    <div className="rounded-lg bg-muted/30 px-5 py-4">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{simplified}</p>
+                    </div>
+                  </TabsContent>
+                )}
+
+                {detailed && (
+                  <TabsContent value="detailed">
+                    <div className="rounded-lg bg-muted/30 px-5 py-4">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{detailed}</p>
+                    </div>
+                  </TabsContent>
+                )}
+              </Tabs>
+            ) : (
+              <SummaryPoints summary={summary} pointIcons={pointIcons} />
+            )}
 
             {/* Action buttons */}
             <Separator className="my-3" />
@@ -445,10 +516,39 @@ function BillCard({ bill, language, isExpanded, onToggle, mca, engagement }: Bil
                 <Download className="h-3.5 w-3.5" />
                 {language === "en" ? "Download Summary" : "Pakua Muhtasari"}
               </Button>
+              {bill.pdfFileId && (
+                <PdfDownloadButton storageId={bill.pdfFileId} language={language} />
+              )}
             </div>
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// --- Summary points sub-component ---
+
+function SummaryPoints({
+  summary,
+  pointIcons,
+}: {
+  summary: string[];
+  pointIcons: React.ElementType[];
+}) {
+  return (
+    <ol className="ml-1 flex flex-col gap-3 pt-1 pb-2">
+      {summary.map((point, i) => {
+        const PointIcon = pointIcons[i % pointIcons.length];
+        return (
+          <li key={i} className="flex gap-3 text-sm leading-relaxed">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <PointIcon className="h-3.5 w-3.5" />
+            </span>
+            <span className="pt-0.5">{point}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

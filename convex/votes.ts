@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { validateSession } from "./auth";
 
 export const cast = mutation({
   args: {
@@ -51,8 +52,20 @@ export const cast = mutation({
 });
 
 export const getByBudgetItem = query({
-  args: { budgetItemId: v.id("budgetItems") },
+  args: {
+    sessionToken: v.optional(v.string()),
+    budgetItemId: v.id("budgetItems"),
+  },
   handler: async (ctx, args) => {
+    if (args.sessionToken) {
+      const session = await validateSession(ctx, args.sessionToken);
+      if (session.role !== "superadmin") {
+        const budgetItem = await ctx.db.get(args.budgetItemId);
+        if (budgetItem && budgetItem.county !== session.county) {
+          throw new Error("Access denied: budget item is not in your county");
+        }
+      }
+    }
     return await ctx.db
       .query("votes")
       .withIndex("by_budgetItemId", (q) =>

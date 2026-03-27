@@ -1,38 +1,55 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { validateSession } from "./auth";
 
 export const list = query({
   args: {
+    sessionToken: v.optional(v.string()),
     county: v.optional(v.string()),
     status: v.optional(v.union(v.literal("active"), v.literal("closed"))),
     billId: v.optional(v.id("bills")),
   },
   handler: async (ctx, args) => {
+    let scopeCounty: string | undefined;
+
+    if (args.sessionToken) {
+      const session = await validateSession(ctx, args.sessionToken);
+      if (session.role !== "superadmin") {
+        scopeCounty = session.county;
+      }
+    }
+
+    const effectiveCounty = scopeCounty ?? args.county;
+
     if (args.billId) {
       const results = await ctx.db
         .query("budgetItems")
         .withIndex("by_billId", (q) => q.eq("billId", args.billId!))
         .collect();
 
-      if (args.status) {
-        return results.filter((item) => item.status === args.status);
+      let filtered = results;
+      if (effectiveCounty) {
+        filtered = filtered.filter((item) => item.county === effectiveCounty);
       }
-      return results;
+      if (args.status) {
+        filtered = filtered.filter((item) => item.status === args.status);
+      }
+      return filtered;
     }
 
-    if (args.county && args.status) {
+    if (effectiveCounty && args.status) {
       return await ctx.db
         .query("budgetItems")
         .withIndex("by_county_status", (q) =>
-          q.eq("county", args.county!).eq("status", args.status!)
+          q.eq("county", effectiveCounty).eq("status", args.status!)
         )
         .collect();
     }
 
-    if (args.county) {
+    if (effectiveCounty) {
       return await ctx.db
         .query("budgetItems")
-        .withIndex("by_county", (q) => q.eq("county", args.county!))
+        .withIndex("by_county", (q) => q.eq("county", effectiveCounty))
         .collect();
     }
 

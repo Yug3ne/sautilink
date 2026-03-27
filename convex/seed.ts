@@ -1,4 +1,5 @@
 import { mutation } from "./_generated/server";
+import { hashPassword } from "./lib/passwords";
 
 export default mutation({
   args: {},
@@ -17,6 +18,10 @@ export default mutation({
       county: "Kiambu",
       party: "Jubilee",
       avatar: "PN",
+      email: "peter@sauti.ke",
+      passwordHash: await hashPassword("password123"),
+      role: "mca",
+      isActive: true,
     });
     const mca2 = await ctx.db.insert("mcas", {
       name: "Hon. Faith Wambui",
@@ -24,6 +29,10 @@ export default mutation({
       county: "Kisumu",
       party: "ODM",
       avatar: "FW",
+      email: "faith@sauti.ke",
+      passwordHash: await hashPassword("password123"),
+      role: "mca",
+      isActive: true,
     });
     const mca3 = await ctx.db.insert("mcas", {
       name: "Hon. Ali Hassan",
@@ -31,6 +40,23 @@ export default mutation({
       county: "Mombasa",
       party: "Wiper",
       avatar: "AH",
+      email: "ali@sauti.ke",
+      passwordHash: await hashPassword("password123"),
+      role: "mca",
+      isActive: true,
+    });
+
+    // Super admin
+    await ctx.db.insert("mcas", {
+      name: "Admin User",
+      ward: "All",
+      county: "All",
+      party: "N/A",
+      avatar: "AD",
+      email: "admin@sauti.ke",
+      passwordHash: await hashPassword("admin123"),
+      role: "superadmin",
+      isActive: true,
     });
 
     // --- Citizens ---
@@ -86,6 +112,7 @@ export default mutation({
       titleSw: "Bajeti ya Kaunti ya Kiambu 2026/2027",
       status: "open",
       county: "Kiambu",
+      ward: "Agikuyu",
       uploadedBy: mca1,
       uploadedAt: "2026-03-15",
       fullTextUrl: "#",
@@ -103,6 +130,14 @@ export default mutation({
         "KES milioni 95 kwa miradi ya maji safi katika kata za Agikuyu na Limuru.",
         "Kodi mpya ya 15% kwa mali za kibiashara kufadhili huduma za dharura.",
       ],
+      simplifiedEn:
+        "This is the annual budget for Kiambu County covering roads, health centers, student bursaries, and water projects. It also proposes a new 15% commercial property tax to fund emergency services.",
+      simplifiedSw:
+        "Hii ni bajeti ya mwaka ya Kaunti ya Kiambu inayoshughulikia barabara, vituo vya afya, bursary za wanafunzi, na miradi ya maji. Pia inapendekeza kodi mpya ya 15% kwa mali za kibiashara kufadhili huduma za dharura.",
+      detailedSummaryEn:
+        "The Kiambu County Annual Budget 2026/2027 allocates KES 2.3 billion for road infrastructure across 12 wards, aiming to improve connectivity and trade. An additional KES 450 million is earmarked for building three new health centers in underserved rural areas. The budget includes KES 180 million for a bursary fund to support secondary and tertiary students, and KES 95 million for clean water projects in Agikuyu and Limuru wards. A controversial proposal introduces a 15% tax on commercial property to create a dedicated emergency services fund for the county.",
+      detailedSummarySw:
+        "Bajeti ya Mwaka ya Kaunti ya Kiambu 2026/2027 inatenga KES bilioni 2.3 kwa miundombinu ya barabara katika kata 12, ikilenga kuboresha usafiri na biashara. KES milioni 450 zimetengwa kwa ujenzi wa vituo vitatu vipya vya afya vijijini. Bajeti inajumuisha KES milioni 180 kwa mfuko wa bursary kusaidia wanafunzi wa sekondari na vyuo, na KES milioni 95 kwa miradi ya maji safi katika kata za Agikuyu na Limuru. Pendekezo la utata linaanzisha kodi ya 15% kwa mali za kibiashara kuunda mfuko maalum wa huduma za dharura kwa kaunti.",
       category: "budget",
     });
     const b2 = await ctx.db.insert("bills", {
@@ -110,6 +145,7 @@ export default mutation({
       titleSw: "Muswada wa Huduma za Afya wa Kaunti ya Kiambu 2026",
       status: "open",
       county: "Kiambu",
+      ward: "Agikuyu",
       uploadedBy: mca1,
       uploadedAt: "2026-03-10",
       fullTextUrl: "#",
@@ -127,6 +163,14 @@ export default mutation({
         "Mfumo wa kumbukumbu za afya za kidijitali kutekelezwa katika vituo vyote.",
         "Lengo la muda wa majibu ya ambulensi kuwekwa dakika 15 kwa maeneo ya mjini.",
       ],
+      simplifiedEn:
+        "This bill aims to improve healthcare in Kiambu by providing free maternal care, hiring more health workers, and sending mobile clinics to remote areas. It also introduces digital health records and faster ambulance response times.",
+      simplifiedSw:
+        "Muswada huu unalenga kuboresha huduma za afya Kiambu kwa kutoa huduma za bure za uzazi, kuajiri wahudumu zaidi wa afya, na kutuma kliniki za rununu maeneo ya mbali. Pia unaanzisha rekodi za afya za kidijitali na muda wa haraka wa majibu ya ambulensi.",
+      detailedSummaryEn:
+        "The Kiambu County Health Services Bill 2026 mandates free maternal care at all public health facilities across the county. It plans to recruit 200 community health workers by December 2026 to strengthen primary healthcare delivery. Mobile health clinics will be deployed to visit remote wards at least twice monthly, ensuring residents in underserved areas have access to basic medical services. The bill also requires implementation of a digital health records system across all facilities to improve patient care continuity and sets an ambitious 15-minute ambulance response time target for urban areas.",
+      detailedSummarySw:
+        "Muswada wa Huduma za Afya wa Kaunti ya Kiambu 2026 unaamuru huduma za bure za uzazi katika vituo vyote vya afya ya umma kaunti nzima. Unapanga kuajiri wahudumu 200 wa afya ya jamii ifikapo Desemba 2026 kuimarisha utoaji wa huduma za afya ya msingi. Kliniki za afya za rununu zitatumwa kutembelea kata za mbali angalau mara mbili kwa mwezi, kuhakikisha wakazi wa maeneo yasiyohudumiwa wanapata huduma za msingi za matibabu. Muswada pia unahitaji utekelezaji wa mfumo wa rekodi za afya za kidijitali katika vituo vyote na kuweka lengo la dakika 15 la muda wa majibu ya ambulensi kwa maeneo ya mjini.",
       category: "health",
     });
     const b3 = await ctx.db.insert("bills", {
@@ -134,6 +178,7 @@ export default mutation({
       titleSw: "Sheria ya Kuimarisha Elimu ya Kaunti ya Kisumu 2026",
       status: "open",
       county: "Kisumu",
+      ward: "Kolwa East",
       uploadedBy: mca2,
       uploadedAt: "2026-03-08",
       fullTextUrl: "#",
@@ -151,6 +196,14 @@ export default mutation({
         "Programu ya ufadhili wa kaunti kwa wanafunzi 100 bora wa KCSE kila kata.",
         "Maktaba za umma kuanzishwa katika makao makuu 5 ya kaunti ndogo.",
       ],
+      simplifiedEn:
+        "This act invests in education across Kisumu County by building new early childhood centers, expanding free school meals, training teachers in ICT, and providing scholarships to top students.",
+      simplifiedSw:
+        "Sheria hii inawekeza katika elimu kaunti nzima ya Kisumu kwa kujenga vituo vipya vya utoto, kupanua chakula cha bure shuleni, kufunza walimu TEHAMA, na kutoa ufadhili kwa wanafunzi bora.",
+      detailedSummaryEn:
+        "The Kisumu County Education Enhancement Act 2026 allocates KES 320 million for the construction of 15 new Early Childhood Development and Education (ECDE) centers across the county to improve access to pre-primary education. The free school meals program will be extended to cover all public primary schools in the county, addressing nutrition and school attendance simultaneously. A KES 50 million teacher training fund focuses on developing ICT skills among educators. The act establishes a county scholarship program for the top 100 KCSE performers from each ward and plans to build public libraries in five sub-county headquarters to promote literacy and lifelong learning.",
+      detailedSummarySw:
+        "Sheria ya Kuimarisha Elimu ya Kaunti ya Kisumu 2026 inatenga KES milioni 320 kwa ujenzi wa vituo 15 vipya vya Maendeleo ya Utoto na Elimu (ECDE) kaunti nzima kuboresha upatikanaji wa elimu ya awali. Programu ya chakula cha bure shuleni itapanuliwa kufunika shule zote za msingi za umma kaunti nzima, ikishughulikia lishe na mahudhurio shuleni kwa pamoja. Mfuko wa mafunzo ya walimu wa KES milioni 50 unalenga kuendeleza ujuzi wa TEHAMA miongoni mwa waelimishaji. Sheria inaanzisha programu ya ufadhili wa kaunti kwa wanafunzi 100 bora wa KCSE kutoka kila kata na kupanga kujenga maktaba za umma katika makao makuu matano ya kaunti ndogo kukuza kusoma na kujifunza maisha yote.",
       category: "education",
     });
     const b4 = await ctx.db.insert("bills", {
@@ -158,6 +211,7 @@ export default mutation({
       titleSw: "Muswada wa Uhifadhi wa Mazingira wa Kaunti ya Mombasa 2026",
       status: "draft",
       county: "Mombasa",
+      ward: "Mvita",
       uploadedBy: mca3,
       uploadedAt: "2026-03-20",
       fullTextUrl: "#",
@@ -175,6 +229,14 @@ export default mutation({
         "Programu ya ukusanyaji wa taka ya jamii inayolenga ajira ya vijana.",
         "Kuundwa kwa mfuko wa kubadilika kwa mabadiliko ya hali ya hewa wa kaunti.",
       ],
+      simplifiedEn:
+        "This bill protects Mombasa's coastal environment by banning single-use plastics near beaches, restoring mangroves, requiring environmental assessments, and creating youth jobs in waste collection.",
+      simplifiedSw:
+        "Muswada huu unalinda mazingira ya pwani ya Mombasa kwa kupiga marufuku plastiki karibu na fukwe, kurejesha mikoko, kuhitaji tathmini za mazingira, na kuunda ajira za vijana katika ukusanyaji taka.",
+      detailedSummaryEn:
+        "The Mombasa County Environmental Conservation Bill 2026 introduces a ban on single-use plastics within 500 meters of all beach areas to protect the coastal ecosystem and marine life. It allocates KES 200 million for mangrove restoration along Tudor Creek, recognizing the critical role mangroves play in coastal protection and biodiversity. All new developments will be required to undergo mandatory environmental impact assessments before approval. The bill establishes a community-based waste collection program with a focus on youth employment, creating green jobs while addressing solid waste challenges. Additionally, a county climate change adaptation fund will be created to finance resilience-building initiatives.",
+      detailedSummarySw:
+        "Muswada wa Uhifadhi wa Mazingira wa Kaunti ya Mombasa 2026 unaanzisha marufuku ya plastiki za matumizi moja ndani ya mita 500 za maeneo yote ya fukwe kulinda mfumo wa ikolojia wa pwani na viumbe vya baharini. Unatenga KES milioni 200 kwa urejeshaji wa mikoko kando ya Tudor Creek, ukitambua jukumu muhimu la mikoko katika ulinzi wa pwani na bioanuwai. Maendeleo yote mapya yatahitajika kupitia tathmini za lazima za athari za mazingira kabla ya kuidhinishwa. Muswada unaanzisha programu ya ukusanyaji taka ya jamii inayolenga ajira ya vijana, kuunda kazi za kijani wakati wa kushughulikia changamoto za taka ngumu. Zaidi ya hayo, mfuko wa kubadilika kwa mabadiliko ya hali ya hewa wa kaunti utaundwa kufadhili mipango ya kujenga ustahimilivu.",
       category: "environment",
     });
 
@@ -230,7 +292,8 @@ export default mutation({
     const bi5 = await ctx.db.insert("budgetItems", {
       billId: b1,
       description: "15% commercial property tax for emergency services",
-      descriptionSw: "Kodi ya 15% ya mali za kibiashara kwa huduma za dharura",
+      descriptionSw:
+        "Kodi ya 15% ya mali za kibiashara kwa huduma za dharura",
       amount: 0,
       ward: "All",
       county: "Kiambu",
