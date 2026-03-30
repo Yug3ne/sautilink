@@ -26,6 +26,27 @@ export const getByWard = query({
   },
 });
 
+export const listByCounty = query({
+  args: { county: v.string() },
+  handler: async (ctx, args) => {
+    const mcas = await ctx.db
+      .query("mcas")
+      .withIndex("by_county", (q) => q.eq("county", args.county))
+      .collect();
+    // Only return active, non-superadmin MCAs and strip sensitive fields
+    return mcas
+      .filter((m) => m.isActive && m.role === "mca")
+      .map((m) => ({
+        _id: m._id,
+        name: m.name,
+        ward: m.ward,
+        county: m.county,
+        party: m.party,
+        avatar: m.avatar,
+      }));
+  },
+});
+
 export const listAll = query({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {

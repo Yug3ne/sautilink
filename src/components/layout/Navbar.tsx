@@ -16,14 +16,16 @@ import {
   ChevronRight,
   X,
   Link2,
+  MessageSquare,
 } from "lucide-react";
 
 const navLinks = [
   { to: "/", label: "Home", labelSw: "Nyumbani", icon: Home },
   { to: "/bills", label: "Bills", labelSw: "Miswada", icon: FileText },
   { to: "/vote", label: "Vote", labelSw: "Piga Kura", icon: Vote },
+  { to: "/feedback", label: "Feedback", labelSw: "Maoni", icon: MessageSquare },
   { to: "/ussd", label: "USSD Simulator", labelSw: "Kiigizo cha USSD", icon: Phone },
-  { to: "/dashboard", label: "Admin Dashboard", labelSw: "Dashibodi", icon: BarChart3 },
+  { to: "/dashboard", label: "Dashboard", labelSw: "Dashibodi", icon: BarChart3 },
 ];
 
 function SautiLogo() {

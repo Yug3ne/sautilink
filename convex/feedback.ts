@@ -45,6 +45,26 @@ export const list = query({
   },
 });
 
+export const getByCitizen = query({
+  args: { citizenId: v.id("citizens") },
+  handler: async (ctx, args) => {
+    const feedbacks = await ctx.db
+      .query("feedback")
+      .withIndex("by_citizenId", (q) => q.eq("citizenId", args.citizenId))
+      .collect();
+
+    // Enrich with MCA name
+    const enriched = await Promise.all(
+      feedbacks.map(async (fb) => {
+        const mca = await ctx.db.get(fb.mcaId);
+        return { ...fb, mcaName: mca?.name ?? "Unknown MCA", mcaWard: mca?.ward ?? "" };
+      })
+    );
+
+    return enriched;
+  },
+});
+
 export const submit = mutation({
   args: {
     citizenId: v.id("citizens"),

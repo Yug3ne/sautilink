@@ -12,8 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-// Progress not currently used but available
-// import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,7 +49,6 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Bell,
   Download,
   BarChart3,
   Activity,
@@ -61,7 +58,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   MessageCircle,
-  Shield,
   Filter,
   Send,
   Smartphone,
@@ -246,158 +242,93 @@ export function Dashboard() {
     budgetItemsList === undefined
   ) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-                S
-              </div>
-              <div>
-                <h1 className="text-sm font-semibold leading-tight">
-                  Sauti-Link
-                </h1>
-                <p className="text-xs text-muted-foreground">Admin Console</p>
-              </div>
-            </div>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Loading real-time data...
+          </p>
         </div>
-        <div className="mx-auto max-w-[1440px] px-6 py-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Loading real-time data...
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i} className="relative overflow-hidden">
-                <CardContent className="pt-6">
-                  <div className="animate-pulse space-y-3">
-                    <div className="h-3 w-24 rounded bg-muted" />
-                    <div className="h-8 w-16 rounded bg-muted" />
-                    <div className="h-3 w-32 rounded bg-muted" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-4 w-48 rounded bg-muted" />
-                  <div className="h-[350px] rounded bg-muted" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="relative overflow-hidden">
               <CardContent className="pt-6">
                 <div className="animate-pulse space-y-3">
-                  <div className="h-4 w-32 rounded bg-muted" />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-12 rounded bg-muted" />
-                  ))}
+                  <div className="h-3 w-24 rounded bg-muted" />
+                  <div className="h-8 w-16 rounded bg-muted" />
+                  <div className="h-3 w-32 rounded bg-muted" />
                 </div>
               </CardContent>
             </Card>
-          </div>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 w-48 rounded bg-muted" />
+                <div className="h-[350px] rounded bg-muted" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 w-32 rounded bg-muted" />
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-12 rounded bg-muted" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top Admin Bar */}
-      <div className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-              S
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold leading-tight">
-                Sauti-Link
-              </h1>
-              <p className="text-xs text-muted-foreground">Admin Console</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className="gap-1.5 py-1 text-green-600 border-green-300"
-            >
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              Live
-            </Badge>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Date Range Selector */}
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger size="sm" className="w-[150px]">
-                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Download Report */}
-            <Button size="sm" className="gap-1.5">
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Download Report</span>
-            </Button>
-
-            {/* Notification Bell */}
-            <button className="relative rounded-lg p-2 transition-colors hover:bg-muted">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-                {pendingFeedback}
-              </span>
-            </button>
-
-            <Separator orientation="vertical" className="h-8" />
-
-            {/* Admin Profile */}
-            <div className="flex items-center gap-3">
-              <Avatar size="sm">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                  PN
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden md:block">
-                <p className="text-sm font-medium leading-tight">
-                  Hon. Peter Njoroge
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <Shield className="mr-0.5 inline h-3 w-3" />
-                  MCA, Agikuyu Ward &middot; Kiambu
-                </p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header + Controls */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Real-time citizen engagement analytics
+            {counties.length > 0
+              ? ` across ${counties.length === 1 ? counties[0] : `${counties.length} counties`}`
+              : ""}
+            .
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            variant="outline"
+            className="gap-1.5 py-1 text-green-600 border-green-300"
+          >
+            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </Badge>
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger size="sm" className="w-[150px]">
+              <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="1y">Last year</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="gap-1.5">
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Download Report</span>
+          </Button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="mx-auto max-w-[1440px] px-6 py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real-time citizen engagement analytics for Kiambu County.
-          </p>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Total Citizens */}
           <Card className="relative overflow-hidden">
             <CardContent className="pt-6">
@@ -1331,6 +1262,5 @@ export function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

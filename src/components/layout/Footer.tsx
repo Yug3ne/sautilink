@@ -7,10 +7,10 @@ import {
   Mail,
   MapPin,
   ExternalLink,
-  Twitter,
-  Facebook,
-  Github,
   MessageCircle,
+  Globe,
+  Users,
+  Code,
 } from "lucide-react";
 
 const quickLinks = [
@@ -82,14 +82,14 @@ export function Footer() {
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                   aria-label="Twitter"
                 >
-                  <Twitter className="h-3.5 w-3.5" />
+                  <Globe className="h-3.5 w-3.5" />
                 </a>
                 <a
                   href="#"
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                   aria-label="Facebook"
                 >
-                  <Facebook className="h-3.5 w-3.5" />
+                  <Users className="h-3.5 w-3.5" />
                 </a>
                 <a
                   href="#"
@@ -103,7 +103,7 @@ export function Footer() {
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                   aria-label="GitHub"
                 >
-                  <Github className="h-3.5 w-3.5" />
+                  <Code className="h-3.5 w-3.5" />
                 </a>
               </div>
             </div>

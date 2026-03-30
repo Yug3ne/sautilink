@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, Outlet, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -51,19 +50,16 @@ function isActiveLink(pathname: string, to: string, end?: boolean) {
 }
 
 function getPageTitle(pathname: string) {
-  const link = sidebarLinks.find((l) =>
-    l.end ? pathname === l.to : pathname.startsWith(l.to) && !l.end
-  );
-  // Check non-end links first for more specific matches, then fall back
   const specific = sidebarLinks.find(
     (l) => !l.end && pathname.startsWith(l.to)
   );
-  return specific?.label || link?.label || "Overview";
+  const exact = sidebarLinks.find((l) => l.end && pathname === l.to);
+  return specific?.label || exact?.label || "Overview";
 }
 
 function KenyaFlagStripe() {
   return (
-    <div className="flex h-[3px] w-full">
+    <div className="flex h-[3px] w-full shrink-0">
       <div className="h-full flex-1 bg-black" />
       <div className="h-full flex-1 bg-red-600" />
       <div className="h-full flex-1 bg-green-700" />
@@ -202,21 +198,20 @@ export function DashboardLayout() {
     : `MCA, ${mca?.ward || "Unknown"} Ward`;
 
   return (
-    <div className="flex min-h-svh flex-col">
-      {/* Kenya flag stripe at very top */}
+    <div className="flex h-svh flex-col overflow-hidden">
+      {/* Single Kenya flag stripe at very top */}
       <KenyaFlagStripe />
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
-        <aside className="hidden w-64 shrink-0 border-r bg-sidebar lg:flex lg:flex-col">
-          <KenyaFlagStripe />
+        <aside className="hidden w-64 shrink-0 border-r bg-sidebar lg:flex lg:flex-col overflow-y-auto">
           <SidebarContent isSuperAdmin={isSuperAdmin} mca={mca} />
         </aside>
 
         {/* Main area */}
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header bar */}
-          <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center justify-between px-4 lg:px-6">
               {/* Left: mobile menu + title */}
               <div className="flex items-center gap-3">
@@ -255,8 +250,8 @@ export function DashboardLayout() {
               </div>
 
               {/* Right: notification + avatar + logout */}
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" className="relative">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
                   <Bell className="h-4 w-4" />
                   <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
@@ -264,15 +259,15 @@ export function DashboardLayout() {
                   </span>
                 </Button>
 
-                <Separator orientation="vertical" className="h-6" />
+                <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden flex-col leading-none sm:flex">
+                  <div className="hidden flex-col leading-none md:flex">
                     <span className="text-sm font-medium">{displayName}</span>
                     <span className="text-[11px] text-muted-foreground">
                       {wardLabel}
@@ -282,10 +277,10 @@ export function DashboardLayout() {
 
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon"
                   onClick={logout}
                   title="Sign out"
-                  className="text-muted-foreground hover:text-destructive"
+                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -293,9 +288,11 @@ export function DashboardLayout() {
             </div>
           </header>
 
-          {/* Main content */}
-          <main className="flex-1 overflow-auto p-6">
-            <Outlet />
+          {/* Main content — scrollable */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-7xl p-4 sm:p-6">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

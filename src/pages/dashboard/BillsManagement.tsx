@@ -266,8 +266,8 @@ export function BillsManagement() {
   }
 
   function getMcaName(mcaId: Id<"mcas">): string {
-    const mca = mcas.find((m) => m._id === mcaId);
-    return mca?.name ?? "Unknown MCA";
+    const found = (mcas ?? []).find((m) => m._id === mcaId);
+    return found?.name ?? "Unknown MCA";
   }
 
   return (

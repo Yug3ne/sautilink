@@ -6,6 +6,7 @@ import { Home } from "@/pages/Home";
 import { Bills } from "@/pages/Bills";
 import { VotePage } from "@/pages/VotePage";
 import { USSDSimulator } from "@/pages/USSDSimulator";
+import { FeedbackPage } from "@/pages/FeedbackPage";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
 import { BillsManagement } from "@/pages/dashboard/BillsManagement";
@@ -23,6 +24,7 @@ export function App() {
           <Route path="/" element={<Home />} />
           <Route path="/bills" element={<Bills />} />
           <Route path="/vote" element={<VotePage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/ussd" element={<USSDSimulator />} />
         </Route>
 

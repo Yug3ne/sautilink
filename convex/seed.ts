@@ -87,7 +87,7 @@ export default mutation({
       language: "en",
       verified: true,
     });
-    const c4 = await ctx.db.insert("citizens", {
+    await ctx.db.insert("citizens", {
       nationalId: "33456789",
       name: "Hassan Omar",
       county: "Mombasa",
@@ -140,7 +140,7 @@ export default mutation({
         "Bajeti ya Mwaka ya Kaunti ya Kiambu 2026/2027 inatenga KES bilioni 2.3 kwa miundombinu ya barabara katika kata 12, ikilenga kuboresha usafiri na biashara. KES milioni 450 zimetengwa kwa ujenzi wa vituo vitatu vipya vya afya vijijini. Bajeti inajumuisha KES milioni 180 kwa mfuko wa bursary kusaidia wanafunzi wa sekondari na vyuo, na KES milioni 95 kwa miradi ya maji safi katika kata za Agikuyu na Limuru. Pendekezo la utata linaanzisha kodi ya 15% kwa mali za kibiashara kuunda mfuko maalum wa huduma za dharura kwa kaunti.",
       category: "budget",
     });
-    const b2 = await ctx.db.insert("bills", {
+    await ctx.db.insert("bills", {
       title: "Kiambu County Health Services Bill 2026",
       titleSw: "Muswada wa Huduma za Afya wa Kaunti ya Kiambu 2026",
       status: "open",
@@ -206,7 +206,7 @@ export default mutation({
         "Sheria ya Kuimarisha Elimu ya Kaunti ya Kisumu 2026 inatenga KES milioni 320 kwa ujenzi wa vituo 15 vipya vya Maendeleo ya Utoto na Elimu (ECDE) kaunti nzima kuboresha upatikanaji wa elimu ya awali. Programu ya chakula cha bure shuleni itapanuliwa kufunika shule zote za msingi za umma kaunti nzima, ikishughulikia lishe na mahudhurio shuleni kwa pamoja. Mfuko wa mafunzo ya walimu wa KES milioni 50 unalenga kuendeleza ujuzi wa TEHAMA miongoni mwa waelimishaji. Sheria inaanzisha programu ya ufadhili wa kaunti kwa wanafunzi 100 bora wa KCSE kutoka kila kata na kupanga kujenga maktaba za umma katika makao makuu matano ya kaunti ndogo kukuza kusoma na kujifunza maisha yote.",
       category: "education",
     });
-    const b4 = await ctx.db.insert("bills", {
+    await ctx.db.insert("bills", {
       title: "Mombasa County Environmental Conservation Bill 2026",
       titleSw: "Muswada wa Uhifadhi wa Mazingira wa Kaunti ya Mombasa 2026",
       status: "draft",
@@ -265,7 +265,7 @@ export default mutation({
       status: "active",
       deadline: "2026-04-15",
     });
-    const bi3 = await ctx.db.insert("budgetItems", {
+    await ctx.db.insert("budgetItems", {
       billId: b1,
       description: "Bursary fund for Agikuyu students - KES 45M",
       descriptionSw: "Mfuko wa bursary kwa wanafunzi wa Agikuyu - KES 45M",
@@ -277,7 +277,7 @@ export default mutation({
       status: "active",
       deadline: "2026-04-15",
     });
-    const bi4 = await ctx.db.insert("budgetItems", {
+    await ctx.db.insert("budgetItems", {
       billId: b1,
       description: "Clean water project Limuru Ward - KES 50M",
       descriptionSw: "Mradi wa maji safi Kata ya Limuru - KES 50M",

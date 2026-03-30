@@ -6,14 +6,12 @@ export const getStats = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     let scopeCounty: string | undefined;
-    let scopeWard: string | undefined;
     let scopeMcaId: any;
 
     if (args.sessionToken) {
       const session = await validateSession(ctx, args.sessionToken);
       if (session.role !== "superadmin") {
         scopeCounty = session.county;
-        scopeWard = session.ward;
         scopeMcaId = session.mcaId;
       }
     }

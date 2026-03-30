@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "convex-quickstart": {
+      "source": "get-convex/agent-skills",
+      "sourceType": "github",
+      "computedHash": "7879afbb2b954be36ef29d294f3b6c2851cad54e9f5e5ac90461f0f97d4d1fff"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
