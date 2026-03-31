@@ -26,7 +26,29 @@ dist-ssr
 # Lock files (using bun.lock only)
 package-lock.json
 
-# Agent/skill files
+# Agent/skill/AI files
 .agents/
 .claude/skills/
 skills-lock.json
+skills/
+AGENTS.md
+CLAUDE.md
+.codebuddy/
+.commandcode/
+.continue/
+.crush/
+.factory/
+.goose/
+.kilocode/
+.kiro/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.windsurf/
+.zencoder/
